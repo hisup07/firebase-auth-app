@@ -3,11 +3,27 @@ const signupForm = document.querySelector("#signup-form");
 const logOut = document.querySelectorAll(".loggedout");
 const logIn = document.querySelector("#login-form");
 const createGuide = document.querySelector("#create-form");
+const adminForm = document.querySelector(".admin-actions");
+
+//admin cloud functions
+adminForm.addEventListener("submit", e => {
+  e.preventDefault();
+  const email = adminForm["admin-email"].value;
+  const addAdminRole = functions.httpsCallable("addAdminRole");
+  addAdminRole({ email }).then(() => {
+    //console.log(result);
+    adminForm.reset();
+  });
+});
 //Listen for auth status change
 auth.onAuthStateChanged(user => {
   //navbar update
-  setUpUi(user);
+
   if (user) {
+    user.getIdTokenResult().then(data => {
+      user.admin = data.claims.admin;
+      setUpUi(user);
+    });
     db.collection("guide").onSnapshot(
       snapshot => {
         setUpGuides(snapshot.docs);
@@ -17,6 +33,7 @@ auth.onAuthStateChanged(user => {
       }
     );
   } else {
+    setUpUi(user);
     setUpGuides([]);
   }
 });
@@ -45,8 +62,11 @@ signupForm.addEventListener("submit", e => {
       const modal = document.querySelector("#modal-signup");
       M.Modal.getInstance(modal).close();
       signupForm.reset();
+      signupForm.querySelector(".error").innerHTML = "";
     })
-    .catch(err => console.log(err));
+    .catch(err => {
+      signupForm.querySelector(".error").innerHTML = err.message;
+    });
 });
 logOut.forEach(elm =>
   elm.addEventListener("click", e => {
@@ -66,9 +86,10 @@ logIn.addEventListener("submit", e => {
       const modal = document.querySelector("#modal-login");
       M.Modal.getInstance(modal).close();
       logIn.reset();
+      logIn.querySelector(".error").innerHTML = err.message;
     })
     .catch(err => {
-      console.log(err);
+      logIn.querySelector(".error").innerHTML = err.message;
     });
   //console.log({ email, password });
 });
